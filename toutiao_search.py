@@ -1,6 +1,12 @@
 import requests
 import json
 import os,re
+import logging
+
+
+logging.basicConfig(level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(filename)s - %(lineno)d行 - %(message)s")
+
 
 class toutiao():
 
@@ -66,9 +72,10 @@ class toutiao():
         for i in pics:
             # print(i)
             title = i.get('title')
+            title_dir = re.sub('[^\u4E00-\u9FA5,:，：]','',title) #标题中只保留中文
             image_list = i.get('pics_addr')
 
-            dirpath = path + '\\pics\\' + title
+            dirpath = path + '\\pics\\' + title_dir
             if not os.path.exists(dirpath):
                 os.makedirs(dirpath)
             
@@ -78,7 +85,7 @@ class toutiao():
                 content = response.content
                 with open(r'{}\{}.jpg'.format(dirpath,num),'wb') as f:
                     f.write(content)
-            print('下载{}张图片，【tite】{}'.format(len(image_list),title))
+            logging.info('下载{}张图片，【tite】{}'.format(len(image_list),title))
                 
                 
         
@@ -98,7 +105,7 @@ if __name__ == '__main__':
         }
     
     tt = toutiao(headers=headers)
-    json = tt.get_url_response(search='车模',url=url)
+    json = tt.get_url_response(search='美景',url=url)
     innerpage = tt.get_innerpage(json)
     pics = tt.get_pic_addr(innerpage)
     tt.download_pic(pics)
