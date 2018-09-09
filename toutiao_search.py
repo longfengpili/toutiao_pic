@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO,
 def sleep(func):
     def wait(*args, **kwargs):
         random_num = random.random() * 3
-        logging.info('执行函数{}，等待{}秒'.format(func.__name__,random_num))
+        # logging.info('执行函数{}，等待{}秒'.format(func.__name__,random_num))
         time.sleep(random_num)
         f = func(*args, **kwargs)
         return f
@@ -62,7 +62,7 @@ class toutiao():
         for i in innerpagelist:
             title = i.get('title')
             innerpage_addr = i.get('innerpage_addr')
-            logging.info('{}:{}'.format(title,innerpage_addr))
+            logging.info('【title】{}，【innerpage_addr】{}'.format(title,innerpage_addr))
 
             response = requests.get(innerpage_addr,headers=headers)
             text = response.text
@@ -86,6 +86,7 @@ class toutiao():
                 }
             # print(pics)
             picslist.append(pics)
+            # print(picslist)
 
         return picslist
 
@@ -97,6 +98,8 @@ class toutiao():
             f.write(content)
 
     def download_pic(self,picslist):
+        resultlist = []
+        # print(picslist)
         path = os.getcwd()
         # print(path)
         for i in picslist:
@@ -110,12 +113,13 @@ class toutiao():
                 os.makedirs(dirpath)
             # print(image_list)
             for num,url in enumerate(image_list):
-                # print(url)
                 self.download_one_pic(dirpath,url,num)
+                logging.info('【title】{},第【{}】图，【URL】{}'.format(title,num,url))
                 
-            result = '下载{}张图片，【tite】{}'.format(len(image_list),title)
+            result = '【tite】{1}，下载{0}张图片，'.format(len(image_list),title)
+            resultlist.append(result)
             # logging.info(result)
-            return result
+        return result
     
     def download_pic_once(self,offset,search):
         response_json = self.get_url_response(offset,search)
