@@ -159,9 +159,9 @@ class toutiao():
 if __name__ == '__main__':
     pic_counts = 0
     offsetlist = [0,1]
-    search= input('请输入您想下载的图片关键字：')
+    search= input('请输入您想下载的图片关键字(默认古装美女)：')
     if not search:
-        search = '美女'
+        search = '古装美女'
 
     count = input('请输入您想下载的图片数量：')
     try:
