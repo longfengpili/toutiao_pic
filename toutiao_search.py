@@ -12,8 +12,8 @@ logging.basicConfig(level=logging.INFO,
 
 def sleep(func):
     def wait(*args, **kwargs):
-        random_num = random.random() * 10
-        logging.info('等待{}秒'.format(random_num))
+        random_num = random.random() * 3
+        logging.info('执行函数{}，等待{}秒'.format(func.__name__,random_num))
         time.sleep(random_num)
         f = func(*args, **kwargs)
         return f
@@ -155,7 +155,7 @@ if __name__ == '__main__':
         }
     
     tt = toutiao(headers=headers)
-    tt.multiple_download_pic(offset=10,search='桌面壁纸')
+    tt.multiple_download_pic(offset=10,search='壁纸')
 
 
     # print(type(data))
