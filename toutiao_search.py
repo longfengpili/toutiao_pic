@@ -4,6 +4,7 @@ import os,re
 import logging
 import random
 import time
+import math
 from mythread import MyThread
 
 
@@ -148,7 +149,7 @@ class toutiao():
 
 if __name__ == '__main__':
     search= input('请输入您想下载的图片关键字：')
-    offset = int(input('请输入您想下载的图片种数：')) / 20 #此处的20与count一致
+    offset = abs(math.ceil(int(input('请输入您想下载的图片种数：')) / 20)) #此处的20与count一致
 
     headers = {
             'accept': 'application/json, text/javascript',
