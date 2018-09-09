@@ -2,32 +2,48 @@ import requests
 import json
 import os,re
 import logging
+import random
+import time
+from mythread import MyThread
 
 
 logging.basicConfig(level=logging.INFO,
-        format="%(asctime)s - %(levelname)s - %(filename)s - %(lineno)d行 - %(message)s")
+        format="%(asctime)s - %(levelname)s - %(filename)s - %(threadName)s - %(lineno)d行 - %(message)s")
 
+def sleep(func):
+    def wrapper(*args, **kwargs):
+        random_num = random.random() * 10
+        logging.info('等待{}秒'.format(random_num))
+        time.sleep(random_num)
+        f = func(*args, **kwargs)
+        return f
+
+    return wrapper
 
 class toutiao():
 
-    def __init__(self,headers,offset=0):
-        self.offset = offset
+    def __init__(self,headers,count=20):
         self.headers = headers
+        self.count = count
 
-    def get_url_response(self,search,url):
+    def get_url_response(self,offset,search,url):
 
         params = {
-            'offset':self.offset,
+            'offset':offset,
             'format':'json',
             'keyword':search,
-            'autoload':'true'
+            'autoload':'true',
+            'count':offset + self.count
         }
         response = requests.get(url=url,params=params,headers=self.headers)
+        logging.info(response.url)
 
         return response.json()
 
+    # @sleep
     def get_innerpage(self,json):
         data = json.get('data')
+        innerpagelist = []
         for i in data:
             if i.get('title') and i.get('tag_id'):
                 title = i.get('title')
@@ -36,12 +52,16 @@ class toutiao():
                     'title':title,
                     'innerpage_addr':innerpage_addr
                 }
-                yield innerpage
+                innerpagelist.append(innerpage)
+
+        return innerpagelist
     
-    def get_pic_addr(self,innerpage):
-        for i in innerpage:
+    def get_pic_addr(self,innerpagelist):
+        picslist = []
+        for i in innerpagelist:
             title = i.get('title')
             innerpage_addr = i.get('innerpage_addr')
+            logging.info('{}:{}'.format(title,innerpage_addr))
 
             response = requests.get(innerpage_addr,headers=headers)
             text = response.text
@@ -63,13 +83,16 @@ class toutiao():
                     'title':title,
                     'pics_addr':pics_addr_list
                 }
-            yield pics
+            # print(pics)
+            picslist.append(pics)
+
+        return picslist
 
 
-    def download_pic(self,pics):
+    def download_pic(self,picslist):
         path = os.getcwd()
         # print(path)
-        for i in pics:
+        for i in picslist:
             # print(i)
             title = i.get('title')
             title_dir = re.sub('[^\u4E00-\u9FA5,:，：]','',title) #标题中只保留中文
@@ -78,17 +101,40 @@ class toutiao():
             dirpath = path + '\\pics\\' + title_dir
             if not os.path.exists(dirpath):
                 os.makedirs(dirpath)
-            
+            # print(image_list)
             for num,j in enumerate(image_list):
                 # print(j)
                 response = requests.get(j,headers=self.headers)
                 content = response.content
                 with open(r'{}\{}.jpg'.format(dirpath,num),'wb') as f:
                     f.write(content)
-            logging.info('下载{}张图片，【tite】{}'.format(len(image_list),title))
+            result = '下载{}张图片，【tite】{}'.format(len(image_list),title)
+            # logging.info(result)
+            return result
+    
+    def download_pic_once(self,offset,search,url):
+        response_json = self.get_url_response(offset,search,url)
+        innerpagelist = self.get_innerpage(response_json)
+        picslist = self.get_pic_addr(innerpagelist)
+        result = self.download_pic(picslist)
+        return result
+
+    def multiple_download_pic(self,offset,search,url):
+        threads = []
+        for i in range(offset):
+            offset = i * self.count
+            t = MyThread(func=self.download_pic_once,args=(offset,search,url),name=i + 1)
+            threads.append(t)
+
+        for t in threads:
+            t.start()
+            
+        for t in threads:
+            t.join()
                 
-                
-        
+
+            
+
 
 
 if __name__ == '__main__':
@@ -105,10 +151,7 @@ if __name__ == '__main__':
         }
     
     tt = toutiao(headers=headers)
-    json = tt.get_url_response(search='美景',url=url)
-    innerpage = tt.get_innerpage(json)
-    pics = tt.get_pic_addr(innerpage)
-    tt.download_pic(pics)
+    tt.multiple_download_pic(offset=10,search='桌面壁纸',url=url)
 
 
     # print(type(data))
