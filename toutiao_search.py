@@ -147,6 +147,8 @@ class toutiao():
 
 
 if __name__ == '__main__':
+    search= input('请输入您想下载的图片关键字：')
+    offset = int(input('请输入您想下载的图片种数：')) / 20 #此处的20与count一致
 
     headers = {
             'accept': 'application/json, text/javascript',
@@ -159,7 +161,7 @@ if __name__ == '__main__':
         }
     
     tt = toutiao(headers=headers)
-    tt.multiple_download_pic(offset=10,search='壁纸')
+    tt.multiple_download_pic(offset=offset,search=search)
 
 
     # print(type(data))
