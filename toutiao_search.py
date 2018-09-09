@@ -6,6 +6,9 @@ import random
 import time
 import math
 from mythread import MyThread
+from threading import Lock
+
+lock = Lock()
 
 
 logging.basicConfig(level=logging.INFO,
@@ -13,7 +16,7 @@ logging.basicConfig(level=logging.INFO,
 
 def sleep(func):
     def wait(*args, **kwargs):
-        random_num = random.random() * 3
+        random_num = random.random() * 2
         # logging.info('执行函数{}，等待{}秒'.format(func.__name__,random_num))
         time.sleep(random_num)
         f = func(*args, **kwargs)
@@ -22,19 +25,20 @@ def sleep(func):
 
 class toutiao():
 
-    def __init__(self,headers,count=20):
+    def __init__(self,headers,count=5):
         self.headers = headers
         self.count = count
-
+        
     @sleep
     def get_url_response(self,offset,search):
+
         url = 'https://www.toutiao.com/search_content/?'
         params = {
             'offset':offset,
             'format':'json',
             'keyword':search,
             'autoload':'true',
-            'count':offset + self.count
+            'count':self.count
         }
         response = requests.get(url=url,params=params,headers=self.headers)
         logging.info(response.url)
@@ -63,7 +67,7 @@ class toutiao():
         for i in innerpagelist:
             title = i.get('title')
             innerpage_addr = i.get('innerpage_addr')
-            logging.info('【title】{}，【innerpage_addr】{}'.format(title,innerpage_addr))
+            logging.info('【title】{}，【URL】{}'.format(title,innerpage_addr))
 
             response = requests.get(innerpage_addr,headers=headers)
             text = response.text
@@ -81,22 +85,29 @@ class toutiao():
                     pic_id_list.append(pic_id)
                     pics_addr_list.append(i)
 
-            pics = {
-                    'title':title,
-                    'pics_addr':pics_addr_list
-                }
-            # print(pics)
-            picslist.append(pics)
-            # print(picslist)
+            if len(pics_addr_list) != 0:
+                pics = {
+                        'title':title,
+                        'pics_addr':pics_addr_list
+                    }
+
+                picslist.append(pics)
+            else:
+                logging.info('没有获取到图片,跳过！【title】{},【URL】{}'.format(title,innerpage_addr))
+
 
         return picslist
 
     @sleep
-    def download_one_pic(self,dirpath,url,num):
+    def download_one_pic(self,dirpath,title,url,num):
+        global pic_counts
         response = requests.get(url,headers=self.headers)
         content = response.content
         with open(r'{}\{}.jpg'.format(dirpath,num),'wb') as f:
             f.write(content)
+        pic_counts += 1
+        logging.info('累计下载{}张，【title】{},第【{}】图，【URL】{}'.format(pic_counts,title,num,url))
+        
 
     def download_pic(self,picslist):
         resultlist = []
@@ -109,18 +120,19 @@ class toutiao():
             title_dir = re.sub('[^\u4E00-\u9FA5,:，：]','',title) #标题中只保留中文
             image_list = i.get('pics_addr')
 
-            dirpath = path + '\\pics\\' + title_dir
+            dirpath = path + '\\pics\\【' + str(len(image_list)) + '】' + title_dir
             if not os.path.exists(dirpath):
                 os.makedirs(dirpath)
             # print(image_list)
-            for num,url in enumerate(image_list):
-                self.download_one_pic(dirpath,url,num)
-                logging.info('【title】{},第【{}】图，【URL】{}'.format(title,num,url))
+                #已经存在的就不在下载了，只下载没有的目录
+                for num,url in enumerate(image_list):
+                    # lock.acquire()
+                    self.download_one_pic(dirpath,title,url,num)
+                    # lock.release()
+            else:
+                logging.info('已下载过,【title】{},不再下载'.format(title))
                 
-            result = '【tite】{1}，下载{0}张图片，'.format(len(image_list),title)
-            resultlist.append(result)
-            # logging.info(result)
-        return result
+        return resultlist
     
     def download_pic_once(self,offset,search):
         response_json = self.get_url_response(offset,search)
@@ -129,9 +141,10 @@ class toutiao():
         result = self.download_pic(picslist)
         return result
 
-    def multiple_download_pic(self,offset,search):
+    def multiple_download_pic(self,offsetlist,search):
         threads = []
-        for i in range(offset):
+
+        for i in offsetlist:
             offset = i * self.count
             t = MyThread(func=self.download_pic_once,args=(offset,search),name=i + 1)
             threads.append(t)
@@ -141,15 +154,20 @@ class toutiao():
             
         for t in threads:
             t.join()
-                
-
-            
-
 
 
 if __name__ == '__main__':
+    pic_counts = 0
+    offsetlist = [0,1]
     search= input('请输入您想下载的图片关键字：')
-    offset = abs(math.ceil(int(input('请输入您想下载的图片种数：')) / 20)) #此处的20与count一致
+    if not search:
+        search = '美女'
+
+    count = input('请输入您想下载的图片数量：')
+    try:
+        count = abs(int(count))
+    except:
+        count = 1
 
     headers = {
             'accept': 'application/json, text/javascript',
@@ -161,10 +179,7 @@ if __name__ == '__main__':
             'x-requested-with':'XMLHttpRequest'
         }
     
-    tt = toutiao(headers=headers)
-    tt.multiple_download_pic(offset=offset,search=search)
-
-
-    # print(type(data))
-    # with open('chemo.json','w',encoding='utf-8') as f:
-    #     json.dump(data,f,ensure_ascii=False)
+    while pic_counts < count:
+        tt = toutiao(headers=headers)
+        tt.multiple_download_pic(offsetlist=offsetlist,search=search)
+        offsetlist = [i + len(offsetlist) for i in offsetlist]
