@@ -25,14 +25,14 @@ def sleep(func):
 
 class toutiao():
 
-    def __init__(self,headers,search,count=5):
+    def __init__(self,headers,search,count=5,timeout=2):
         self.headers = headers
         self.count = count
         self.search = search
+        self.timeout = timeout
         
     @sleep
     def get_url_response(self,offset):
-
         url = 'https://www.toutiao.com/search_content/?'
         params = {
             'offset':offset,
@@ -41,8 +41,13 @@ class toutiao():
             'autoload':'true',
             'count':self.count
         }
-        response = requests.get(url=url,params=params,headers=self.headers)
-        logging.info(response.url)
+
+        try:
+            response = requests.get(url=url,params=params,headers=self.headers,timeout=self.timeout)
+            logging.info(response.url)
+        except Exception as e:
+            response = None
+            logging.error(e)
 
         return response.json()
 
@@ -70,8 +75,12 @@ class toutiao():
             innerpage_addr = i.get('innerpage_addr')
             logging.info('【title】{}，【URL】{}'.format(title,innerpage_addr))
 
-            response = requests.get(innerpage_addr,headers=headers)
-            text = response.text
+            try:
+                response = requests.get(innerpage_addr,headers=headers,timeout=self.timeout)
+                text = response.text
+            except Exception as e:
+                text = None
+                logging.error(e)
 
             data = re.sub(r'\\','',text)
             pics_addr_list1 = re.findall(r'"url":"(http.*?)"',data,re.S) #网页类型1
@@ -102,12 +111,16 @@ class toutiao():
     @sleep
     def download_one_pic(self,dirpath,title,url,num):
         global pic_counts
-        response = requests.get(url,headers=self.headers)
-        content = response.content
-        with open(r'{}\{}.jpg'.format(dirpath,num),'wb') as f:
-            f.write(content)
-        pic_counts += 1
-        logging.info('累计下载{}张，【title】{},第【{}】图，【URL】{}'.format(pic_counts,title,num,url))
+        try:
+            response = requests.get(url,headers=self.headers,timeout=self.timeout)
+            content = response.content
+        
+            with open(r'{}\{}.jpg'.format(dirpath,num),'wb') as f:
+                f.write(content)
+            pic_counts += 1
+            logging.info('累计下载{}张，【title】{},第【{}】图，【URL】{}'.format(pic_counts,title,num,url))
+        except Exception as e:
+            logging.error(e)
         
 
     def download_pics(self,picslist):
