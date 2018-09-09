@@ -26,7 +26,7 @@ class toutiao():
         self.count = count
 
     @sleep
-    def get_url_response(self,offset,search,url):
+    def get_url_response(self,offset,search):
         url = 'https://www.toutiao.com/search_content/?'
         params = {
             'offset':offset,
@@ -117,18 +117,18 @@ class toutiao():
             # logging.info(result)
             return result
     
-    def download_pic_once(self,offset,search,url):
-        response_json = self.get_url_response(offset,search,url)
+    def download_pic_once(self,offset,search):
+        response_json = self.get_url_response(offset,search)
         innerpagelist = self.get_innerpage(response_json)
         picslist = self.get_pic_addr(innerpagelist)
         result = self.download_pic(picslist)
         return result
 
-    def multiple_download_pic(self,offset,search,url):
+    def multiple_download_pic(self,offset,search):
         threads = []
         for i in range(offset):
             offset = i * self.count
-            t = MyThread(func=self.download_pic_once,args=(offset,search,url),name=i + 1)
+            t = MyThread(func=self.download_pic_once,args=(offset,search),name=i + 1)
             threads.append(t)
 
         for t in threads:
@@ -155,7 +155,7 @@ if __name__ == '__main__':
         }
     
     tt = toutiao(headers=headers)
-    tt.multiple_download_pic(offset=10,search='桌面壁纸',url=url)
+    tt.multiple_download_pic(offset=10,search='桌面壁纸')
 
 
     # print(type(data))
