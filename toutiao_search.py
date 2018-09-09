@@ -8,17 +8,16 @@ from mythread import MyThread
 
 
 logging.basicConfig(level=logging.INFO,
-        format="%(asctime)s - %(levelname)s - %(filename)s - %(threadName)s - %(lineno)d行 - %(message)s")
+        format="%(asctime)s - %(levelname)s - %(filename)s - %(threadName)s - %(lineno)d - %(funcName)s - %(message)s")
 
 def sleep(func):
-    def wrapper(*args, **kwargs):
+    def wait(*args, **kwargs):
         random_num = random.random() * 10
         logging.info('等待{}秒'.format(random_num))
         time.sleep(random_num)
         f = func(*args, **kwargs)
         return f
-
-    return wrapper
+    return wait
 
 class toutiao():
 
@@ -26,8 +25,9 @@ class toutiao():
         self.headers = headers
         self.count = count
 
+    @sleep
     def get_url_response(self,offset,search,url):
-
+        url = 'https://www.toutiao.com/search_content/?'
         params = {
             'offset':offset,
             'format':'json',
@@ -40,7 +40,7 @@ class toutiao():
 
         return response.json()
 
-    # @sleep
+    @sleep
     def get_innerpage(self,json):
         data = json.get('data')
         innerpagelist = []
@@ -55,7 +55,8 @@ class toutiao():
                 innerpagelist.append(innerpage)
 
         return innerpagelist
-    
+
+    @sleep
     def get_pic_addr(self,innerpagelist):
         picslist = []
         for i in innerpagelist:
@@ -88,6 +89,12 @@ class toutiao():
 
         return picslist
 
+    @sleep
+    def download_one_pic(self,dirpath,url,num):
+        response = requests.get(url,headers=self.headers)
+        content = response.content
+        with open(r'{}\{}.jpg'.format(dirpath,num),'wb') as f:
+            f.write(content)
 
     def download_pic(self,picslist):
         path = os.getcwd()
@@ -102,12 +109,10 @@ class toutiao():
             if not os.path.exists(dirpath):
                 os.makedirs(dirpath)
             # print(image_list)
-            for num,j in enumerate(image_list):
-                # print(j)
-                response = requests.get(j,headers=self.headers)
-                content = response.content
-                with open(r'{}\{}.jpg'.format(dirpath,num),'wb') as f:
-                    f.write(content)
+            for num,url in enumerate(image_list):
+                # print(url)
+                self.download_one_pic(dirpath,url,num)
+                
             result = '下载{}张图片，【tite】{}'.format(len(image_list),title)
             # logging.info(result)
             return result
@@ -138,7 +143,6 @@ class toutiao():
 
 
 if __name__ == '__main__':
-    url = 'https://www.toutiao.com/search_content/?'
 
     headers = {
             'accept': 'application/json, text/javascript',

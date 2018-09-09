@@ -1,9 +1,5 @@
 from threading import Thread
 import random,time
-import logging
-
-logging.basicConfig(level=logging.INFO,
-        format="%(asctime)s - %(levelname)s - %(filename)s - %(threadName)s - %(lineno)d行 - %(message)s")
 
 class MyThread(Thread):
     def __init__(self, func, name, args=()):
