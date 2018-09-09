@@ -25,18 +25,19 @@ def sleep(func):
 
 class toutiao():
 
-    def __init__(self,headers,count=5):
+    def __init__(self,headers,search,count=5):
         self.headers = headers
         self.count = count
+        self.search = search
         
     @sleep
-    def get_url_response(self,offset,search):
+    def get_url_response(self,offset):
 
         url = 'https://www.toutiao.com/search_content/?'
         params = {
             'offset':offset,
             'format':'json',
-            'keyword':search,
+            'keyword':self.search,
             'autoload':'true',
             'count':self.count
         }
@@ -109,7 +110,7 @@ class toutiao():
         logging.info('累计下载{}张，【title】{},第【{}】图，【URL】{}'.format(pic_counts,title,num,url))
         
 
-    def download_pic(self,picslist):
+    def download_pics(self,picslist):
         resultlist = []
         # print(picslist)
         path = os.getcwd()
@@ -120,7 +121,7 @@ class toutiao():
             title_dir = re.sub('[^\u4E00-\u9FA5,:，：]','',title) #标题中只保留中文
             image_list = i.get('pics_addr')
 
-            dirpath = path + '\\pics\\【' + str(len(image_list)) + '】' + title_dir
+            dirpath = path + '\\' + self.search + '\\【' + str(len(image_list)) + '】' + title_dir
             if not os.path.exists(dirpath):
                 os.makedirs(dirpath)
             # print(image_list)
@@ -134,19 +135,19 @@ class toutiao():
                 
         return resultlist
     
-    def download_pic_once(self,offset,search):
-        response_json = self.get_url_response(offset,search)
+    def download_pic_once(self,offset):
+        response_json = self.get_url_response(offset)
         innerpagelist = self.get_innerpage(response_json)
         picslist = self.get_pic_addr(innerpagelist)
-        result = self.download_pic(picslist)
+        result = self.download_pics(picslist)
         return result
 
-    def multiple_download_pic(self,offsetlist,search):
+    def multiple_download_pic(self,offsetlist):
         threads = []
 
         for i in offsetlist:
             offset = i * self.count
-            t = MyThread(func=self.download_pic_once,args=(offset,search),name=i + 1)
+            t = MyThread(func=self.download_pic_once,args=(offset,),name=i + 1)
             threads.append(t)
 
         for t in threads:
@@ -180,6 +181,6 @@ if __name__ == '__main__':
         }
     
     while pic_counts < count:
-        tt = toutiao(headers=headers)
-        tt.multiple_download_pic(offsetlist=offsetlist,search=search)
+        tt = toutiao(search=search,headers=headers)
+        tt.multiple_download_pic(offsetlist=offsetlist)
         offsetlist = [i + len(offsetlist) for i in offsetlist]
