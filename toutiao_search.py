@@ -76,7 +76,7 @@ class toutiao():
             logging.info('【title】{}，【URL】{}'.format(title,innerpage_addr))
 
             try:
-                response = requests.get(innerpage_addr,headers=headers,timeout=self.timeout)
+                response = requests.get(innerpage_addr,headers=self.headers,timeout=self.timeout)
                 text = response.text
             except Exception as e:
                 text = None
